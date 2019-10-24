@@ -1,4 +1,6 @@
 var $initialSpinnerLoading = $('.spinner-holder.inital-state');
+var $entriesContainer = $('#entries');
+var spinnerTemplate = '<div id="spinnerTemplate"><div class="spinner-overlay">Loading...</div><p class="text-center">Loading...</p></div>';
 var $contents = $('#contents');
 var $sourceContents = $('#source-contents');
 var $dataSources = $('#data-sources > tbody');
@@ -319,20 +321,25 @@ function browseDataSource(id) {
   $contents.addClass('hidden');
   $initialSpinnerLoading.addClass('animated');
   $('.settings-btns').removeClass('active');
-  $('.entries-message').html('<br>Loading data...');
 
   // Input file temporarily disabled
   // $contents.append('<form>Import data: <input type="file" /></form><hr /><div id="entries"></div>');
 
   Promise.all([
-      fetchCurrentDataSourceEntries(),
       fetchCurrentDataSourceUsers(),
       fetchCurrentDataSourceDetails()
     ])
     .then(function() {
       $sourceContents.removeClass('hidden');
       $initialSpinnerLoading.removeClass('animated');
+      $sourceContents.removeClass('hidden');
+      $entriesContainer.prepend(spinnerTemplate);
       $('[href="#entries"]').click();
+      windowResized();
+      return fetchCurrentDataSourceEntries()
+    })
+    .then(function() {
+      $entriesContainer.find('#spinnerTemplate').remove();
       windowResized();
 
       if (copyData.context === 'overlay') {
