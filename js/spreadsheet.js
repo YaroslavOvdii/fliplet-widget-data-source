@@ -75,29 +75,14 @@ var spreadsheet = function(options) {
    * 
    * @returns {object} - possible keys: right, left, top, bottom - shows which closest cells have data
    */
-  function nearestCellsWithData(selectedCell, tableData) {
+  function getAdjacentCellsWithData(selectedCell, tableData) {
     var cellsWithData = {
       right: tableData[selectedCell.row][selectedCell.col + 1] !== null,
-      left: tableData[selectedCell.row][selectedCell.col - 1] !== null,
-      top: tableData[selectedCell.row - 1][selectedCell.col] !== null,
+      left: selectedCell.col ? tableData[selectedCell.row][selectedCell.col - 1] !== null : false,
+      top: selectedCell.row ? tableData[selectedCell.row - 1][selectedCell.col] !== null : false,
       bottom: tableData[selectedCell.row + 1][selectedCell.col] !== null,
+      current: tableData[selectedCell.row][selectedCell.col] !== null
     };
-    var countCellsWithData = 0;
-
-    for (var key in cellsWithData) {
-      if (cellsWithData[key]) {
-        countCellsWithData++;
-      }
-    }
-    
-    // If there is no true value in cellsWithData object we should select all table
-    if (countCellsWithData === 0) {
-      return {selectAll: true};
-    }
-
-    if (tableData[selectedCell.row][selectedCell.col] !== null) {
-      return {cellWithData: true};
-    }
     
     return cellsWithData;
   }
@@ -107,7 +92,7 @@ var spreadsheet = function(options) {
    * 
    * @param {array} tableData - an array of data from the Handsontable library
    * @param {int} startSearchFrom - index of the row/col from what we should start a search
-   * @param {int} colIndex - a not necessary option that tells us what we need to look, a row index or column index
+   * @param {int} colIndex - (optional) when provided, the search is performed along the rows for the column specified
    * @returns {int} - index of the row or column
    */
   function getStartIndex(tableData, startSearchFrom, colIndex) {
@@ -127,7 +112,7 @@ var spreadsheet = function(options) {
       }
     }
 
-    return currentIndex < 0 ? 0: currentIndex;
+    return Math.max(0, currentIndex);
   }
 
   /**
@@ -135,14 +120,14 @@ var spreadsheet = function(options) {
    * 
    * @param {array} tableData - an array of data from the Handsontable library
    * @param {int} startSearchFrom - index of the row/col from what we should start a search
-   * @param {int} colIndex - a not necessary option that tells us what we need to look, a row index or column index
+   * @param {int} colIndex - (optional) when provided, the search is performed along the rows for the column specified
    * @returns {int} - index of the row or column
    * 
    */
   function getEndIndex(tableData, startSearchFrom, colIndex) {
     var currentIndex = startSearchFrom;
 
-    if (currentIndex || currentIndex === 0) {
+    if (colIndex || colIndex === 0) {
       for (currentIndex; currentIndex < tableData.length; currentIndex++) {
         if (tableData[currentIndex][colIndex] === null) {
           break;
@@ -166,7 +151,7 @@ var spreadsheet = function(options) {
    * 
    * @returns {Array/Boolean} - coordinates that need to be selected. Example of the returned data: [[startRow, startCol, endRow, endCol]]
    */
-  function coordinatesToSelect(cellPosition) {
+  function getSelectAllCoordinates(cellPosition) {
     var firstCol, lastCol, firstRow, lastRow, tableData;
 
     // Returns array of the data from the table with Handsontable API
@@ -176,10 +161,19 @@ var spreadsheet = function(options) {
       col: cellPosition[0][1]
     };
 
-    var nearestDataAt = nearestCellsWithData(selectedCellPosition, tableData);
+    var nearestDataAt = getAdjacentCellsWithData(selectedCellPosition, tableData);
 
+    var countCellsWithData = 0;
+
+    for (var key in nearestDataAt) {
+      if (nearestDataAt[key]) {
+        countCellsWithData++;
+      }
+    }
+    
+    // If there is no true value in cellsWithData object we should select all table
     // Return false in the case when we need to select all table data
-    if (nearestDataAt.selectAll) {
+    if (countCellsWithData === 0) {
       return false;
     }
 
@@ -197,7 +191,7 @@ var spreadsheet = function(options) {
       firstRow = firstRow === 0 ? firstRow : firstRow + 1;
 
       lastCol = getEndIndex(tableData[firstRow], firstCol);
-      lastCol = lastCol < selectedCellPosition.col ? selectedCellPosition.col : lastCol;
+      lastCol = Math.max(lastCol, selectedCellPosition.col);
 
       lastRow = getEndIndex(tableData, firstRow, firstCol);
     } else if (nearestDataAt.top) {
@@ -240,7 +234,7 @@ var spreadsheet = function(options) {
       lastRow = getEndIndex(tableData, firstRow, firstCol);
 
       firstRow = selectedCellPosition.row;
-    } else if (nearestDataAt.cellWithData) {
+    } else if (nearestDataAt.current) {
       firstCol = getStartIndex(tableData[selectedCellPosition.row], selectedCellPosition.col);
 
       // If column index is not 0 it means that data what we need to select is in the next column
@@ -448,7 +442,7 @@ var spreadsheet = function(options) {
 
       if ((event.ctrlKey || event.metaKey) && event.keyCode === 65 ) {
         var selectedCell = hot.getSelected();
-        var selectedRange = coordinatesToSelect(selectedCell);
+        var selectedRange = getSelectAllCoordinates(selectedCell);
         if (!selectedRange) {
           return;
         }
