@@ -4,6 +4,9 @@
     "CodeMirror": "readonly",
     "Raven": "readonly",
     "spreadsheet": "readonly",
-    "jsdoc": "readonly"
+    "jsdoc": "readonly",
+    "Handsontable": "readonly",
+    "Papa": "readonly",
+    "hot": "readonly"
   }
 }
