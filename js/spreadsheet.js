@@ -376,6 +376,10 @@ var spreadsheet = function(options) {
     minSpareCols: 10,
     // Hooks
     beforeChange: function(changes) {
+      if (window.event.key === 'Delete' || window.event.key === 'Backspace') {
+        return;
+      }
+
       // Check if the change was on columns row and validate
       // If we change row without header we put header for this row
       // In this case user won't lose his data if he forgot to input header
